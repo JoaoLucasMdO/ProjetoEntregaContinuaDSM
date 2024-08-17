@@ -1,0 +1,193 @@
+<%- include('header'); -%>
+<%- include('menuLateral'); -%>
+
+
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h3>Cadastro de Horários</h3>
+                <form id="horarioForm">
+                    <div class="form-group">
+                        <label for="dia">Dia:</label>
+                        <input type="date" id="dia" name="dia" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="professor">Professor:</label>
+                        <select id="professor" name="professor" class="form-control">
+                            <% professores.forEach(professor=> { %>
+                            <option value="<%= professor.id %>"><%= professor.nome %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="materia">Matéria:</label>
+                        <select id="materia" name="materia" class="form-control">
+                            <% materias.forEach(materia=> { %>
+                                <option value="<%= materia.id %>"><%= materia.nome %></option>
+                                <% }); %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="horaInicio">Horário de Entrada:</label>
+                        <input type="time" id="horaInicio" name="horaInicio" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="horaFim">Horário de Saída:</label>
+                        <input type="time" id="horaFim" name="horaFim" required class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                    <button type="button" class="btn btn-secondary">Cancelar</button>
+                </form>
+            </div>
+            <div class="col-md-6">
+                <h3>Horários Cadastrados</h3>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Professor</th>
+                                <th>Matéria</th>
+                                <th>Data</th>
+                                <th>Entrada</th>
+                                <th>Saída</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedule-list">
+                            <!-- Itens da lista serão adicionados dinamicamente aqui -->
+                            <% horarios.forEach(horario=> { %>
+                                <tr>
+                                    <td>
+                                        <%= horario.pertenceProf.nome %>
+                                    </td>
+                                    <td>
+                                        <%= horario.pertenceMateria.nome %>
+                                    </td>
+                                    <td>
+                                        <%= horario.horaInicio.getDate() %>/<%= horario.horaInicio.getMonth() +1 %>/<%= horario.horaInicio.getFullYear() %>
+                                    </td>
+                                    <td>
+                                        <%= horario.horaInicio.toString().substring(15,21) %>
+                                    </td>
+                                    <td>
+                                        <%= horario.horaFim.toString().substring(15,21) %>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/horario/editar/<%=horario.id%>"><button
+                                                    class="btn btn-sm btn-primary edit-button">Editar</button></a>
+                                            <button onclick="excluirHorario('<%=horario.id%>')"
+                                                class="btn btn-sm btn-danger delete-button ml-2">Excluir</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicione os scripts do Bootstrap e o seu script personalizado -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        const urlBase = window.location.href.replace(/\/[^\/]*$/, '')
+        const access_token = localStorage.getItem('token') || null
+
+                document.getElementById('horarioForm').addEventListener('submit', function (event) {
+                    event.preventDefault() // evita o recarregamento
+                    let horario = {} // Objeto professor
+                    horario = {
+                        "horaInicio": new Date(`${document.getElementById('dia').value} ${document.getElementById('horaInicio').value} GMT-0300`),
+                        "horaFim": new Date(`${document.getElementById('dia').value} ${document.getElementById('horaFim').value} GMT-0300`),
+                        "pertenceProf": document.getElementById('professor').value,
+                        "pertenceMateria": document.getElementById('materia').value
+                    }/* Fim do objeto */
+                    fetch(`${urlBase}/horario`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'access-token': access_token
+                        },
+                        body: JSON.stringify(horario)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.errors) {
+                                alert('Horário incluído com sucesso!')
+                                //limpamos o formulário
+                                location.reload()
+                            } else if(access_token == null) {
+                                window.location.href = ('/login')
+                            }
+                            else{
+                                if (Array.isArray(data.errors)) { // Verifica se data.errors é uma array
+                                    const errorMessages = data.errors.map(error => error.msg).join('\n')
+                                    alert(` ${errorMessages}`)
+                                } else {
+                                    alert(`${data.error}`)
+                                }
+                                location.reload()
+                            }
+                        })
+                })
+
+                function excluirHorario(id) {
+                    fetch(`${urlBase}/horario/editar/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'access-token': access_token
+                        },
+                    }).then(response => response.json())
+                        .then(data => {
+                            if (data.status = 200) {
+                                window.alert(`Horário excluído com sucesso!`)
+                                window.location.reload()
+                            } else {
+                                if (Array.isArray(data.errors)) { // Verifica se data.errors é uma array
+                                    const errorMessages = data.errors.map(error => error.msg).join('\n')
+                                    alert(` ${errorMessages}`)
+                                } else {
+                                    alert(`${data.error}`)
+                                }
+                                window.location.href = ('/login')
+                            }
+                        })
+                }
+
+                function parseJwt(token) {
+                    try {
+                        const base64Url = token.split(".")[1]
+                        const base64 = base64Url.replace('-', '+').replace('_', '/')
+                        return JSON.parse(atob(base64))
+                    } catch (e) {
+                        return null
+                    }
+                }
+                
+                document.addEventListener("DOMContentLoaded", function () {
+                    const token = localStorage.getItem('token')
+                    if (!token) {//Não existe o token, enviamos para o login
+                        window.location.href = '/login'
+                    } else {
+                        //token existe, Verificar se é válido
+                        const tokenData = parseJwt(token)
+                        if (tokenData && tokenData.exp && tokenData.exp * 1000 > Date.now()) {
+                            //Token existe e não expirou. Não faremos nada
+                        } else {
+                            window.location.href = '/login' //Se estiver expirado
+                        }
+                    }
+                })
+    </script>
+    <br>
+    <br>
+    <br>
+</body>
+
+<%- include('footer'); -%>

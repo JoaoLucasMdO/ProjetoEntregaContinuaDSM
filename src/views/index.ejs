@@ -1,0 +1,205 @@
+<%- include('header'); -%>
+    <%- include('menuLateral'); -%>
+        <body>
+            <div class="container mt-5">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h3>Informações Cadastradas</h3>
+                        <div class="table-container" id="tabelaInfo">
+                            <table class="table" >
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Materia</th>
+                                        <th>Dia</th>
+                                        <th>Entrada</th>
+                                        <th>Saída</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="info-list">
+                                    <% horarios.forEach(horario=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= horario.pertenceProf.nome %>
+                                            </td>
+                                            <td>
+                                                <%= horario.pertenceMateria.nome %>
+                                            </td>
+                                            <td>
+                                                <%= horario.horaInicio.getDate() %>/<%= horario.horaInicio.getMonth() +1 %>/<%= horario.horaInicio.getFullYear() %>
+                                            </td>
+                                            <td>
+                                                <%= horario.horaInicio.toString().substring(15,21) %>
+                                            </td>
+                                            <td>
+                                                <%= horario.horaFim.toString().substring(15,21) %>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="/horario/editar/<%=horario.id%>">
+                                                        <button class="btn btn-sm btn-primary edit-button">
+                                                            Editar
+                                                        </button>
+                                                    </a>
+                                                    <button onclick="excluirHorario('<%=horario.id%>')" class="btn btn-sm btn-danger delete-button ml-2">
+                                                            Excluir
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }); %>
+                                </tbody>
+                                
+                            </table>
+                        </div>
+                        <button onclick="imprimirTabela()"
+                                    class="btn btn-sm btn-info  ml-2">Imprimir</button>
+                    </div>
+                </div>
+            </div>
+
+            <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+            <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+            <script>
+                const access_token = localStorage.getItem('token') || null
+
+function imprimirTabela() {
+    // let tableHtml = document.getElementById('tabelaInfo').innerHTML
+    let tableHtml = `
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Materia</th>
+                        <th>Dia</th>
+                        <th>Entrada</th>
+                        <th>Saída</th>
+                    </tr>
+                </thead>
+                <tbody id="info-list">`
+//Iterar pelos horários e constrói as linhas da tabela
+
+tableHtml += `
+        <% horarios.forEach(horario=> { %>
+            <tr>
+                <td>
+                    <%= horario.pertenceProf.nome %>
+                </td>
+                <td>
+                    <%= horario.pertenceMateria.nome %>
+                </td>
+                <td>
+                    <%= horario.horaInicio.getDate() %>/<%= horario.horaInicio.getMonth() +1 %>/<%= horario.horaInicio.getFullYear() %>
+                </td>
+                <td>
+                    <%= horario.horaInicio.toString().substring(15,21) %>
+                </td>
+                <td>
+                    <%= horario.horaFim.toString().substring(15,21) %>
+                </td>
+                <td colspan="6" style="text-align: center; padding-top: 20px;">
+                    <strong>Assinatura do Professor:</strong> _______________________
+                </td>
+            </tr>
+        <% }); %>
+        </tbody>
+    </table>
+</div>
+ `
+    // Criar um documento temporário para impressão
+    const printWindow = window.open('', '_blank');
+    printWindow.document.open();
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Tabela de Horários</title>
+            <style>
+                .table-container {
+                    margin: 20px;
+                }
+                .table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .table th, .table td {
+                    border: 1px solid black;
+                    padding: 8px;
+                    text-align: left;
+                }
+                .btn-group {
+                    display: flex;
+                }
+                .btn {
+                    margin-right: 5px;
+                }
+            </style>
+        </head>
+        <body>
+            ${tableHtml}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+
+    // Iniciar a impressão
+    printWindow.print();
+    printWindow.onafterprint = function() {
+        printWindow.close();
+    };
+}
+
+               
+                function parseJwt(token) {
+                    try {
+                        const base64Url = token.split(".")[1]
+                        const base64 = base64Url.replace('-', '+').replace('_', '/')
+                        return JSON.parse(atob(base64))
+                    } catch (e) {
+                        return null
+                    }
+                }
+                
+                document.addEventListener("DOMContentLoaded", function () {
+                    const token = localStorage.getItem('token')
+                    if (!token) {//Não existe o token, enviamos para o login
+                        window.location.href = '/login'
+                    } else {
+                        //token existe, Verificar se é válido
+                        const tokenData = parseJwt(token)
+                        if (tokenData && tokenData.exp && tokenData.exp * 1000 > Date.now()) {
+                            //Token existe e não expirou. Não faremos nada
+                        } else {
+                            window.location.href = '/login' //Se estiver expirado
+                        }
+                    }
+                })
+
+                function excluirHorario(id) {
+                    fetch(`/horario/editar/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'access-token': access_token
+                        },
+                    }).then(response => response.json())
+                        .then(data => {
+                            if (data.status = 200) {
+                                window.alert(`Horário excluído com sucesso!`)
+                                window.location.reload()
+                            } else {
+                                if (Array.isArray(data.errors)) { // Verifica se data.errors é uma array
+                                    const errorMessages = data.errors.map(error => error.msg).join('\n')
+                                    alert(` ${errorMessages}`)
+                                } else {
+                                    alert(`${data.error}`)
+                                }
+                                window.location.href = ('/login')
+                            }
+                        })
+                }
+            </script>
+
+<%- include('footer'); -%>
